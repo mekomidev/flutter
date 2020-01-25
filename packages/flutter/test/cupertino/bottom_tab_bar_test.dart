@@ -254,6 +254,41 @@ void main() {
     expect(image.image, activeIcon);
   });
 
+  testWidgets('Sets correct layout modes in landscape on iPhone pre-10 non-Plus models', (WidgetTester tester) async {
+    // Mock a landscape iPhone 8
+    tester.binding.window.physicalSizeTestValue = const Size(1334, 750);
+    tester.binding.window.devicePixelRatioTestValue = 2;
+
+    final CupertinoTabBar tabBar = CupertinoTabBar(
+      items: const <BottomNavigationBarItem>[
+        BottomNavigationBarItem(
+          icon: ImageIcon(TestImageProvider(24, 24)),
+          title: Text('Aka'),
+        ),
+        BottomNavigationBarItem(
+          icon: ImageIcon(TestImageProvider(24, 24)),
+          title: Text('Shiro'),
+        ),
+      ],
+    );
+
+    await pumpWidgetWithBoilerplate(tester, MediaQuery(
+      data: const MediaQueryData(),
+      child: CupertinoTabScaffold(
+        tabBar: tabBar,
+        tabBuilder: (BuildContext context, int index) {
+          return const Placeholder();
+        },
+      ),
+    ));
+
+    // Expect the tab bar to be compact
+    expect(tester.getSize(find.byType(CupertinoTabBar)).height, 32.0);
+
+    tester.binding.window.physicalSizeTestValue = null;
+    tester.binding.window.devicePixelRatioTestValue = null;
+  });
+
   testWidgets('Adjusts height to account for bottom padding', (WidgetTester tester) async {
     final CupertinoTabBar tabBar = CupertinoTabBar(
       items: const <BottomNavigationBarItem>[
@@ -268,6 +303,21 @@ void main() {
       ],
     );
 
+    final CupertinoTabBar compactTabBar = CupertinoTabBar(
+      items: const <BottomNavigationBarItem>[
+        BottomNavigationBarItem(
+          icon: ImageIcon(TestImageProvider(24, 24)),
+          title: Text('Aka 2'),
+        ),
+        BottomNavigationBarItem(
+          icon: ImageIcon(TestImageProvider(24, 24)),
+          title: Text('Shiro 2'),
+        ),
+      ],
+      itemLayoutMode: CupertinoTabBarItemLayoutMode.horizontal,
+      barLayoutMode: CupertinoTabBarLayoutMode.compact,
+    );
+
     // Verify height with no bottom padding.
     await pumpWidgetWithBoilerplate(tester, MediaQuery(
       data: const MediaQueryData(),
@@ -278,11 +328,24 @@ void main() {
         },
       ),
     ));
-    expect(tester.getSize(find.byType(CupertinoTabBar)).height, 50.0);
+    expect(tester.getSize(find.byType(CupertinoTabBar)).height, 49.0);
+
+    await pumpWidgetWithBoilerplate(tester, MediaQuery(
+      data: const MediaQueryData(),
+      child: CupertinoTabScaffold(
+        tabBar: compactTabBar,
+        tabBuilder: (BuildContext context, int index) {
+          return const Placeholder();
+        },
+      ),
+    ));
+    expect(tester.getSize(find.byType(CupertinoTabBar)).height, 32.0);
 
     // Verify height with bottom padding.
+    const double bottomPadding = 40.0;
+
     await pumpWidgetWithBoilerplate(tester, MediaQuery(
-      data: const MediaQueryData(padding: EdgeInsets.only(bottom: 40.0)),
+      data: const MediaQueryData(padding: EdgeInsets.only(bottom: bottomPadding)),
       child: CupertinoTabScaffold(
         tabBar: tabBar,
         tabBuilder: (BuildContext context, int index) {
@@ -290,7 +353,40 @@ void main() {
         },
       ),
     ));
-    expect(tester.getSize(find.byType(CupertinoTabBar)).height, 90.0);
+    expect(tester.getSize(find.byType(CupertinoTabBar)).height, 49.0 + bottomPadding);
+
+    await pumpWidgetWithBoilerplate(tester, MediaQuery(
+      data: const MediaQueryData(padding: EdgeInsets.only(bottom: bottomPadding)),
+      child: CupertinoTabScaffold(
+        tabBar: compactTabBar,
+        tabBuilder: (BuildContext context, int index) {
+          return const Placeholder();
+        },
+      ),
+    ));
+    expect(tester.getSize(find.byType(CupertinoTabBar)).height, 32.0 + bottomPadding);
+  });
+
+  testWidgets('Doesn\'t build with compact bar and vertical items', (WidgetTester tester) async {
+    try {
+      final CupertinoTabBar falseCompactTabBar = CupertinoTabBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: ImageIcon(TestImageProvider(24, 24)),
+            title: Text('Aka 2'),
+          ),
+          BottomNavigationBarItem(
+            icon: ImageIcon(TestImageProvider(24, 24)),
+            title: Text('Shiro 2'),
+          ),
+        ],
+        itemLayoutMode: CupertinoTabBarItemLayoutMode.vertical,
+        barLayoutMode: CupertinoTabBarLayoutMode.compact,
+      );
+    } on AssertionError catch (e) {
+      expect(e.toString(), contains('layout'));
+      // Exception expected.
+    }
   });
 
   testWidgets('Opaque background does not add blur effects', (WidgetTester tester) async {

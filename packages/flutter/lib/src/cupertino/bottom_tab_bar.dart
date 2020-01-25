@@ -7,16 +7,37 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/widgets.dart';
 
 import 'colors.dart';
+import 'size_class.dart';
 import 'theme.dart';
 
-// Standard iOS 10 tab bar height.
-const double _kTabBarHeight = 50.0;
+// Standard iOS 11 tab bar height.
+const double _kTabBarHeight = 49.0;
+const double _kTabBarCompactHeight = 32.0;
+
+const double _kTabBarIconHeight = 27.5;
+const double _kTabBarCompactIconHeight = 21.0;
 
 const Color _kDefaultTabBarBorderColor = CupertinoDynamicColor.withBrightness(
   color: Color(0x4C000000),
   darkColor: Color(0x29000000),
 );
 const Color _kDefaultTabBarInactiveColor = CupertinoColors.inactiveGray;
+
+/// The enumerator for [CupertinoBottomTabBar]'s layout mode
+enum CupertinoTabBarLayoutMode {
+  /// Regular tab bar height (compatible with vertical and horizontal icon layouts)
+  regular,
+  /// Compact tab bar height (compatible only with horizontal icon layout)
+  compact
+}
+
+/// The enumerator for [CupertinoBottomTabBar]'s item inner layout mode
+enum CupertinoTabBarItemLayoutMode {
+  /// Stacked item layout, text under icon
+  vertical,
+  /// Horizontal item layout, text to the right of icon
+  horizontal
+}
 
 /// An iOS-styled bottom navigation tab bar.
 ///
@@ -52,12 +73,15 @@ class CupertinoTabBar extends StatelessWidget implements PreferredSizeWidget {
   const CupertinoTabBar({
     Key key,
     @required this.items,
+    this.barLayoutMode,
+    this.itemLayoutMode,
     this.onTap,
     this.currentIndex = 0,
     this.backgroundColor,
     this.activeColor,
     this.inactiveColor = _kDefaultTabBarInactiveColor,
-    this.iconSize = 30.0,
+    this.iconSize = _kTabBarIconHeight,
+    this.compactIconSize = _kTabBarCompactIconHeight,
     this.border = const Border(
       top: BorderSide(
         color: _kDefaultTabBarBorderColor,
@@ -67,12 +91,17 @@ class CupertinoTabBar extends StatelessWidget implements PreferredSizeWidget {
     ),
   }) : assert(items != null),
        assert(
+         !(barLayoutMode == CupertinoTabBarLayoutMode.compact && itemLayoutMode == CupertinoTabBarItemLayoutMode.vertical),
+         "Tab bar's compact layout and items' vertical layout are not compatible"
+       ),
+       assert(
          items.length >= 2,
          "Tabs need at least 2 items to conform to Apple's HIG",
        ),
        assert(currentIndex != null),
        assert(0 <= currentIndex && currentIndex < items.length),
        assert(iconSize != null),
+       assert(compactIconSize != null),
        assert(inactiveColor != null),
        super(key: key);
 
@@ -80,6 +109,18 @@ class CupertinoTabBar extends StatelessWidget implements PreferredSizeWidget {
   ///
   /// Must not be null.
   final List<BottomNavigationBarItem> items;
+
+  /// Controls whether the tab bar should be displayed in its compact mode (landscape mode on iPhone) or the regular one.
+  ///
+  /// When this value is [null], the layout mode is automatically calculated on build
+  final CupertinoTabBarLayoutMode barLayoutMode;
+
+  /// Controls whether the buttons should have a wide appearance, which, as of iOS 11,
+  /// is common apps in landscape mode (iPhone) or always on iPad.
+  /// (source: https://developer.apple.com/videos/play/wwdc2017/204/)
+  ///
+  /// When this value is [null], the layout mode is automatically calculated on build
+  final CupertinoTabBarItemLayoutMode itemLayoutMode;
 
   /// The callback that is called when a item is tapped.
   ///
@@ -123,13 +164,18 @@ class CupertinoTabBar extends StatelessWidget implements PreferredSizeWidget {
   /// Must not be null.
   final double iconSize;
 
+  /// Same as `iconSize`, but applies when `isWide` and `isCompact` are both true
+  final double compactIconSize;
+
   /// The border of the [CupertinoTabBar].
   ///
   /// The default value is a one physical pixel top border with grey color.
   final Border border;
 
   @override
-  Size get preferredSize => const Size.fromHeight(_kTabBarHeight);
+  Size get preferredSize => _isBarCompact ? const Size.fromHeight(_kTabBarCompactHeight) : const Size.fromHeight(_kTabBarHeight);
+
+  bool get _isBarCompact => barLayoutMode == CupertinoTabBarLayoutMode.compact || (barLayoutMode == null && WidgetsBinding.instance.window.physicalSize.height < 800);
 
   /// Indicates whether the tab bar is fully opaque or can have contents behind
   /// it show through it.
@@ -165,24 +211,61 @@ class CupertinoTabBar extends StatelessWidget implements PreferredSizeWidget {
       );
 
     final Color inactive = CupertinoDynamicColor.resolve(inactiveColor, context);
+
+    bool isIconCompact, isItemVertical;
+
+    // Applies the manual layout types, if specified
+    switch(barLayoutMode) {
+      case CupertinoTabBarLayoutMode.compact:
+        isIconCompact = true; break;
+      case CupertinoTabBarLayoutMode.regular:
+        isIconCompact = false; break;
+    }
+
+    switch(itemLayoutMode) {
+      case CupertinoTabBarItemLayoutMode.vertical:
+        isItemVertical = true; break;
+      case CupertinoTabBarItemLayoutMode.horizontal:
+        isItemVertical = false; break;
+    }
+
+    // Automatically determines the layouts of the tab bar and its items based on the context view's size classes
+    if(CupertinoSizeClassHelper.getWidthSizeClass(context) == CupertinoSizeClass.compact) {
+      switch(CupertinoSizeClassHelper.getHeightSizeClass(context)) {
+        case CupertinoSizeClass.compact:
+          isIconCompact ??= true;
+          isItemVertical ??= false;
+          break;
+
+        case CupertinoSizeClass.regular:
+          isIconCompact ??= false;
+          isItemVertical ??= true;
+          break;
+      }
+    } else {
+      isIconCompact ??= false;
+      isItemVertical ??= false;
+    }
+
     Widget result = DecoratedBox(
       decoration: BoxDecoration(
         border: resolvedBorder,
         color: backgroundColor,
       ),
       child: SizedBox(
-        height: _kTabBarHeight + bottomPadding,
+        height: preferredSize.height + bottomPadding,
         child: IconTheme.merge( // Default with the inactive state.
-          data: IconThemeData(color: inactive, size: iconSize),
+          data: IconThemeData(
+            color: inactive,
+            size: isIconCompact ? compactIconSize : iconSize,
+          ),
           child: DefaultTextStyle( // Default with the inactive state.
-            style: CupertinoTheme.of(context).textTheme.tabLabelTextStyle.copyWith(color: inactive),
+            style: (isItemVertical ?
+              CupertinoTheme.of(context).textTheme.tabLabelTextStyle
+              : CupertinoTheme.of(context).textTheme.tabWideLabelTextStyle).copyWith(color: inactive),
             child: Padding(
-              padding: EdgeInsets.only(bottom: bottomPadding),
-              child: Row(
-                // Align bottom since we want the labels to be aligned.
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: _buildTabItems(context),
-              ),
+              padding: isItemVertical ? EdgeInsets.only(top: 4.0, bottom: bottomPadding) : EdgeInsets.only(bottom: bottomPadding),
+              child: _buildTabItems(context, isItemVertical),
             ),
           ),
         ),
@@ -202,7 +285,7 @@ class CupertinoTabBar extends StatelessWidget implements PreferredSizeWidget {
     return result;
   }
 
-  List<Widget> _buildTabItems(BuildContext context) {
+  Widget _buildTabItems(BuildContext context, bool isVertical) {
     final List<Widget> result = <Widget>[];
 
     for (int index = 0; index < items.length; index += 1) {
@@ -220,10 +303,7 @@ class CupertinoTabBar extends StatelessWidget implements PreferredSizeWidget {
                 onTap: onTap == null ? null : () { onTap(index); },
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 4.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: _buildSingleTabItem(items[index], active),
-                  ),
+                  child: isVertical ? _buildSingleTabItem(items[index], active) : _buildSingleWideTabItem(items[index], active)
                 ),
               ),
             ),
@@ -233,16 +313,50 @@ class CupertinoTabBar extends StatelessWidget implements PreferredSizeWidget {
       );
     }
 
-    return result;
+    return Row(
+      // Align bottom since we want the labels to be aligned.
+      // Wide items however need to be center-aligned
+      crossAxisAlignment: isVertical ? CrossAxisAlignment.end : CrossAxisAlignment.center,
+      children: result,
+    );
   }
 
-  List<Widget> _buildSingleTabItem(BottomNavigationBarItem item, bool active) {
-    return <Widget>[
+  Widget _buildSingleTabItem(BottomNavigationBarItem item, bool active) {
+    final List<Widget> components = <Widget>[
       Expanded(
         child: Center(child: active ? item.activeIcon : item.icon),
       ),
-      if (item.title != null) item.title,
     ];
+
+    if (item.title != null) {
+      components.add(item.title);
+    }
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: components
+    );
+  }
+
+  Widget _buildSingleWideTabItem(BottomNavigationBarItem item, bool active) {
+    final List<Widget> components = <Widget>[
+      if (active) item.activeIcon else item.icon,
+    ];
+
+    if (item.title != null) {
+      components.add(
+        Padding(
+          padding: const EdgeInsets.only(left: 4.0),
+          child: item.title,
+        )
+      );
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: components,
+    );
   }
 
   /// Change the active tab item's icon and title colors to active.
@@ -267,22 +381,28 @@ class CupertinoTabBar extends StatelessWidget implements PreferredSizeWidget {
   /// parameters overridden.
   CupertinoTabBar copyWith({
     Key key,
+    CupertinoTabBarLayoutMode barLayoutMode,
+    CupertinoTabBarItemLayoutMode itemLayoutMode,
     List<BottomNavigationBarItem> items,
     Color backgroundColor,
     Color activeColor,
     Color inactiveColor,
     double iconSize,
+    double compactIconSize,
     Border border,
     int currentIndex,
     ValueChanged<int> onTap,
   }) {
     return CupertinoTabBar(
       key: key ?? this.key,
+      barLayoutMode: barLayoutMode ?? this.barLayoutMode,
+      itemLayoutMode: itemLayoutMode ?? this.itemLayoutMode,
       items: items ?? this.items,
       backgroundColor: backgroundColor ?? this.backgroundColor,
       activeColor: activeColor ?? this.activeColor,
       inactiveColor: inactiveColor ?? this.inactiveColor,
       iconSize: iconSize ?? this.iconSize,
+      compactIconSize: compactIconSize ?? this.compactIconSize,
       border: border ?? this.border,
       currentIndex: currentIndex ?? this.currentIndex,
       onTap: onTap ?? this.onTap,

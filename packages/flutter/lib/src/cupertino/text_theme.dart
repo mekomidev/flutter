@@ -45,7 +45,15 @@ const TextStyle _kDefaultTabLabelTextStyle = TextStyle(
   inherit: false,
   fontFamily: '.SF Pro Text',
   fontSize: 10.0,
-  letterSpacing: -0.24,
+  letterSpacing: 0.11,
+  color: CupertinoColors.inactiveGray,
+);
+
+const TextStyle _kDefaultTabWideLabelTextStyle = TextStyle(
+  inherit: false,
+  fontFamily: '.SF Pro Text',
+  fontSize: 12.0,
+  letterSpacing: 0.0,
   color: CupertinoColors.inactiveGray,
 );
 
@@ -128,6 +136,7 @@ class CupertinoTextThemeData extends Diagnosticable {
     TextStyle textStyle,
     TextStyle actionTextStyle,
     TextStyle tabLabelTextStyle,
+    TextStyle tabWideLabelTextStyle,
     TextStyle navTitleTextStyle,
     TextStyle navLargeTitleTextStyle,
     TextStyle navActionTextStyle,
@@ -139,6 +148,7 @@ class CupertinoTextThemeData extends Diagnosticable {
          textStyle,
          actionTextStyle,
          tabLabelTextStyle,
+         tabWideLabelTextStyle,
          navTitleTextStyle,
          navLargeTitleTextStyle,
          navActionTextStyle,
@@ -152,6 +162,7 @@ class CupertinoTextThemeData extends Diagnosticable {
     this._textStyle,
     this._actionTextStyle,
     this._tabLabelTextStyle,
+    this._tabWideLabelTextStyle,
     this._navTitleTextStyle,
     this._navLargeTitleTextStyle,
     this._navActionTextStyle,
@@ -175,6 +186,10 @@ class CupertinoTextThemeData extends Diagnosticable {
   final TextStyle _tabLabelTextStyle;
   /// The [TextStyle] of unselected tabs.
   TextStyle get tabLabelTextStyle => _tabLabelTextStyle ?? _defaults.tabLabelTextStyle;
+
+  final TextStyle _tabWideLabelTextStyle;
+  /// Typography of unselected tabs.
+  TextStyle get tabWideLabelTextStyle => _tabWideLabelTextStyle ?? _defaults.tabWideLabelTextStyle;
 
   final TextStyle _navTitleTextStyle;
   /// The [TextStyle] of titles in standard navigation bars.
@@ -212,6 +227,7 @@ class CupertinoTextThemeData extends Diagnosticable {
       _resolveTextStyle(_textStyle, context, nullOk),
       _resolveTextStyle(_actionTextStyle, context, nullOk),
       _resolveTextStyle(_tabLabelTextStyle, context, nullOk),
+      _resolveTextStyle(_tabWideLabelTextStyle, context, nullOk),
       _resolveTextStyle(_navTitleTextStyle, context, nullOk),
       _resolveTextStyle(_navLargeTitleTextStyle, context, nullOk),
       _resolveTextStyle(_navActionTextStyle, context, nullOk),
@@ -232,6 +248,7 @@ class CupertinoTextThemeData extends Diagnosticable {
     TextStyle textStyle,
     TextStyle actionTextStyle,
     TextStyle tabLabelTextStyle,
+    TextStyle tabWideLabelTextStyle,
     TextStyle navTitleTextStyle,
     TextStyle navLargeTitleTextStyle,
     TextStyle navActionTextStyle,
@@ -244,6 +261,7 @@ class CupertinoTextThemeData extends Diagnosticable {
       textStyle ?? _textStyle,
       actionTextStyle ?? _actionTextStyle,
       tabLabelTextStyle ?? _tabLabelTextStyle,
+      tabWideLabelTextStyle ?? _tabWideLabelTextStyle,
       navTitleTextStyle ?? _navTitleTextStyle,
       navLargeTitleTextStyle ?? _navLargeTitleTextStyle,
       navActionTextStyle ?? _navActionTextStyle,
@@ -259,6 +277,7 @@ class CupertinoTextThemeData extends Diagnosticable {
     properties.add(DiagnosticsProperty<TextStyle>('textStyle', textStyle, defaultValue: defaultData.textStyle));
     properties.add(DiagnosticsProperty<TextStyle>('actionTextStyle', actionTextStyle, defaultValue: defaultData.actionTextStyle));
     properties.add(DiagnosticsProperty<TextStyle>('tabLabelTextStyle', tabLabelTextStyle, defaultValue: defaultData.tabLabelTextStyle));
+    properties.add(DiagnosticsProperty<TextStyle>('tabWideLabelTextStyle', tabWideLabelTextStyle, defaultValue: defaultData.tabWideLabelTextStyle));
     properties.add(DiagnosticsProperty<TextStyle>('navTitleTextStyle', navTitleTextStyle, defaultValue: defaultData.navTitleTextStyle));
     properties.add(DiagnosticsProperty<TextStyle>('navLargeTitleTextStyle', navLargeTitleTextStyle, defaultValue: defaultData.navLargeTitleTextStyle));
     properties.add(DiagnosticsProperty<TextStyle>('navActionTextStyle', navActionTextStyle, defaultValue: defaultData.navActionTextStyle));
@@ -287,6 +306,7 @@ class _TextThemeDefaultsBuilder {
 
   TextStyle get textStyle => _applyLabelColor(_kDefaultTextStyle, labelColor);
   TextStyle get tabLabelTextStyle => _applyLabelColor(_kDefaultTabLabelTextStyle, inactiveGrayColor);
+  TextStyle get tabWideLabelTextStyle => _applyLabelColor(_kDefaultTabWideLabelTextStyle, inactiveGrayColor);
   TextStyle get navTitleTextStyle => _applyLabelColor(_kDefaultMiddleTitleTextStyle, labelColor);
   TextStyle get navLargeTitleTextStyle => _applyLabelColor(_kDefaultLargeTitleTextStyle, labelColor);
   TextStyle get pickerTextStyle => _applyLabelColor(_kDefaultPickerTextStyle, labelColor);
